@@ -67,14 +67,15 @@ func ClearDeviceDataScheduler() {
 
 	for range ticker {
 		if time.Now().UTC().Day() == 1 && time.Now().UTC().Hour() == 23 && time.Now().UTC().Minute() == 59 {
-			fmt.Println("Running scheduler to clear Device Data...")
-
-			// Clear device data
+			message := fmt.Sprintln("Running scheduler to clear Device Data...")
+			log.Println(message)
 			err := clearDeviceData()
 			if err != nil {
-				fmt.Printf("Error clearing Device Data: %v\n", err)
+				message = fmt.Sprintf("Error clearing Device Data: %v\n", err)
+				log.Println(message)
 			} else {
-				fmt.Println("Device Data cleared successfully.")
+				message = fmt.Sprintln("Device Data cleared successfully.")
+				log.Println(message)
 			}
 
 			nextFirstOfMonth = time.Now().UTC().AddDate(0, 1, 0)

@@ -1,6 +1,7 @@
 package initializers
 
 import (
+	"fmt"
 	"github.com/joho/godotenv"
 	"log"
 )
@@ -8,6 +9,7 @@ import (
 func LoadEnvVariables() {
 	err := godotenv.Load() //loading custom port from env
 	if err != nil {
-		log.Fatal("Error loading .env file!")
+		message := fmt.Sprintf("Error loading .env file! Error: %s", err.Error())
+		log.Fatal(message)
 	}
 }

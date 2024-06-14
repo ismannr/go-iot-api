@@ -3,14 +3,13 @@ package main
 import (
 	"gin-crud/initializers"
 	model "gin-crud/models"
+	"log"
 )
 
-func init() {
+func main() {
 	initializers.LoadEnvVariables()
 	initializers.DatabaseInit()
-}
 
-func main() {
 	models := []struct {
 		model interface{}
 		table string
@@ -24,13 +23,18 @@ func main() {
 	}
 
 	for _, m := range models {
-		if initializers.DB.Migrator().HasTable(m.model) && initializers.DB.Migrator().HasTable(m.table) {
-			initializers.DB.Migrator().DropTable(m.model)
-			initializers.DB.Migrator().DropTable(m.table)
+		if initializers.DB.Migrator().HasTable(m.model) {
+			if err := initializers.DB.Migrator().DropTable(m.model); err != nil {
+				log.Printf("Error dropping table %s: %v\n", m.table, err)
+			}
 		}
 	}
 
+	// Auto migrate tables
 	for _, m := range models {
-		initializers.DB.AutoMigrate(m.model)
+		if err := initializers.DB.AutoMigrate(m.model); err != nil {
+			log.Printf("Error migrating model %T: %v\n", m.model, err)
+		}
 	}
+	log.Println("Database migration completed successfully")
 }

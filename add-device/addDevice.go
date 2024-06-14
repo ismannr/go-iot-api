@@ -7,12 +7,10 @@ import (
 	"log"
 )
 
-func init() {
+func main() {
 	initializers.LoadEnvVariables()
 	initializers.DatabaseInit()
-}
 
-func main() {
 	device := models.Device{
 		ID: uuid.New(),
 	}

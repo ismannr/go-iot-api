@@ -5,14 +5,13 @@ import (
 	"gin-crud/initializers"
 	"gin-crud/service"
 	"github.com/gin-gonic/gin"
+	"log"
 )
 
-func init() {
+func main() {
 	initializers.LoadEnvVariables()
 	initializers.DatabaseInit()
-}
 
-func main() {
 	r := gin.Default()
 	controller.UserController(r)
 	controller.GuestController(r)
@@ -20,5 +19,10 @@ func main() {
 	controller.DeviceController(r)
 	go service.TokenExpirationCheckAndUpdateScheduler()
 	go service.ClearDeviceDataScheduler()
-	r.Run()
+	go func() {
+		if err := r.Run(); err != nil {
+			log.Fatalf("Failed to start server: %v", err)
+		}
+	}()
+	select {}
 }

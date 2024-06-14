@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"gin-crud/initializers"
 	models "gin-crud/models"
 	"gin-crud/response"
@@ -68,21 +67,21 @@ func generateToken(user models.SystemData, c *gin.Context) {
 	response.GlobalResponse(c, "Token generated", 200, nil)
 }
 
-func confirmationToken(email string) (string, error) {
-	token := jwt.New(jwt.SigningMethodHS256)
-	claims := token.Claims.(jwt.MapClaims)
-
-	claims["sub"] = email
-	claims["exp"] = time.Now().Add(time.Minute * 10).Unix()
-
-	tokenString, err := token.SignedString([]byte(os.Getenv("SECRET_KEY")))
-	if err != nil {
-		return "", err
-	}
-	endpoint := os.Getenv("CONFIRMATION_ENDPOINT")
-	url := fmt.Sprintf("%s%s", endpoint, tokenString)
-	return url, nil
-}
+//func confirmationToken(email string) (string, error) {
+//	token := jwt.New(jwt.SigningMethodHS256)
+//	claims := token.Claims.(jwt.MapClaims)
+//
+//	claims["sub"] = email
+//	claims["exp"] = time.Now().Add(time.Minute * 10).Unix()
+//
+//	tokenString, err := token.SignedString([]byte(os.Getenv("SECRET_KEY")))
+//	if err != nil {
+//		return "", err
+//	}
+//	endpoint := os.Getenv("CONFIRMATION_ENDPOINT")
+//	url := fmt.Sprintf("%s%s", endpoint, tokenString)
+//	return url, nil
+//}
 
 func getUserByAuth(c *gin.Context) (interface{}, error) {
 	tokenString, err := c.Cookie("Authorization")

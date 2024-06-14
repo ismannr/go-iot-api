@@ -40,11 +40,12 @@ func toCSV(data request.CSVData) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func ReceiveAndSaveData(c *gin.Context) {
+func ReceiveAndSaveData(c *gin.Context) { // saving data from arduino to server
 	var csvData request.CSVData
 
 	if err := c.Bind(&csvData); err != nil {
-		log.Println("Invalid JSON data")
+		message := fmt.Sprintf("Invalid JSON data. Error: %s", http.StatusText(http.StatusBadRequest))
+		log.Println(message)
 		response.GlobalResponse(c, "Invalid JSON data", http.StatusBadRequest, nil)
 		return
 	}
@@ -139,8 +140,15 @@ func GetMonitoringData(c *gin.Context) {
 
 	csvData, err := GetDeviceCsvData(user.ID, deviceID, targetDate, interval)
 	if err != nil {
-		log.Println(err.Error())
-		response.GlobalResponse(c, "Failed to retrieve CSV data", http.StatusInternalServerError, nil)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			response.GlobalResponse(c, "Cannot find the device", 404, nil)
+			return
+		} else if !errors.Is(err, io.EOF) {
+			log.Println(err.Error())
+			response.GlobalResponse(c, "Failed to retrieve CSV data", http.StatusInternalServerError, nil)
+			return
+		}
+		response.GlobalResponse(c, "Empty", http.StatusOK, csvData)
 		return
 	}
 
@@ -262,7 +270,7 @@ func GetDeviceCsvData(userID, deviceID uuid.UUID, targetDate time.Time, interval
 	}
 
 	filteredRecords := filterCSVData(records, targetDate, interval)
-	log.Println(targetDate)
+
 	filteredCSV, err := writeFilteredCSVData(filteredRecords)
 	if err != nil {
 		return "", err

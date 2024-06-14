@@ -1,17 +1,25 @@
 package utils
 
 import (
+	"fmt"
 	"time"
 )
 
 // ParseDate parses a string in the format "YYYY-MM-DD" to a time.Time object.
 func ParseDate(dateString string) (time.Time, error) {
 	layout := "2006-01-02"
-	parsedTime, err := time.Parse(layout, dateString)
+	date, err := time.Parse(layout, dateString)
 	if err != nil {
 		return time.Time{}, err
 	}
-	return parsedTime, nil
+	date = time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
+
+	location, err := time.LoadLocation("Asia/Bangkok") // Use appropriate location string
+	if err != nil {
+		fmt.Println("Error loading location:", err)
+		return time.Time{}, err
+	}
+	return date.In(location), nil
 }
 
 func IsAdult(dob string) bool {

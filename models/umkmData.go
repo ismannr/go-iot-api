@@ -5,6 +5,7 @@ import (
 	"gin-crud/utils"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"strings"
 	"time"
 )
 
@@ -56,9 +57,16 @@ func DeleteDeviceById(db *gorm.DB, userID uuid.UUID, deviceID uuid.UUID) error {
 	}
 	user.Devices = &updatedDevices
 
-	device.Data = nil
+	dataString := string(device.Data)
+	lines := strings.Split(dataString, "\n")
+	if len(lines) > 0 {
+		device.Data = []byte(lines[0] + "\n")
+	} else {
+		device.Data = nil
+	}
 	device.IsActivated = false
 	device.UmkmDataId = nil
+	device.Name = ""
 
 	if err := db.Save(&device).Error; err != nil {
 		return err
@@ -68,7 +76,7 @@ func DeleteDeviceById(db *gorm.DB, userID uuid.UUID, deviceID uuid.UUID) error {
 
 func RegisterDeviceById(db *gorm.DB, userID uuid.UUID, deviceID uuid.UUID) error {
 	var device Device
-	if err := db.First(&device, "id = ?", deviceID).Error; err != nil {
+	if err := db.First(&device, "id = ? AND umkm_data_id IS NULL", deviceID).Error; err != nil {
 		return err
 	}
 
@@ -84,6 +92,7 @@ func RegisterDeviceById(db *gorm.DB, userID uuid.UUID, deviceID uuid.UUID) error
 	}
 	device.IsActivated = true
 	device.UmkmDataId = &user.ID
+	device.Name = "New Device"
 	if err := db.Save(&device).Error; err != nil {
 		return err
 	}
@@ -93,6 +102,21 @@ func RegisterDeviceById(db *gorm.DB, userID uuid.UUID, deviceID uuid.UUID) error
 	}
 	*user.Devices = append(*user.Devices, device)
 	return db.Save(&user).Error
+}
+
+func UpdateDeviceName(db *gorm.DB, userID uuid.UUID, deviceID uuid.UUID, newName string) error {
+	var device Device
+	var user *UmkmData
+	if err := db.Preload("Devices").First(&user, "id = ?", userID).Error; err != nil {
+		return err
+	}
+	if err := db.First(&device, "id = ?", deviceID).Error; err != nil {
+		return utils.ErrDeviceAlreadyDeleted
+	}
+
+	device.Name = newName
+
+	return db.Save(&device).Error
 }
 
 func GetUserDeviceById(db *gorm.DB, userID uuid.UUID, deviceID uuid.UUID) (*Device, error) {

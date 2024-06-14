@@ -10,6 +10,7 @@ import (
 type Device struct {
 	gorm.Model
 	ID          uuid.UUID `gorm:"type:uuid;primary_key"`
+	Name        string
 	Data        []byte
 	IsActivated bool
 	UmkmDataId  *uuid.UUID `gorm:"column:umkm_data_id"`

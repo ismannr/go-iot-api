@@ -6,11 +6,7 @@ import (
 
 type DeviceRequest struct {
 	ID          uuid.UUID
-	Password    string
-	OxygenLevel float32
-	WaterTemp   float32
-	EcLevel     float32
-	PhLevel     float32
+	Name        string
 	IsActivated bool
 	UmkmDataId  uuid.UUID
 }

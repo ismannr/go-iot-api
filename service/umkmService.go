@@ -5,9 +5,11 @@ import (
 	"gin-crud/utils"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"log"
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	"gin-crud/initializers"
 	model "gin-crud/models"
@@ -29,17 +31,18 @@ func getUmkmByAuth(c *gin.Context) (*model.UmkmData, error) {
 	return umkm, nil
 }
 
-func GetParticipantData(c *gin.Context) {
-	participant, err := getUmkmByAuth(c)
+func GetUserData(c *gin.Context) {
+	user, err := getUmkmByAuth(c)
 	if err != nil {
 		response.GlobalResponse(c, err.Error(), http.StatusUnauthorized, nil)
 		return
 	}
-	response.GlobalResponse(c, "Successfully retrieving participant data", http.StatusOK, participant)
+	resp := response.BindUserToResponse(user)
+	response.GlobalResponse(c, "Successfully retrieving user data", http.StatusOK, resp)
 }
 
-func UpdateParticipant(c *gin.Context) {
-	participant, err := getUmkmByAuth(c)
+func UpdateData(c *gin.Context) {
+	user, err := getUmkmByAuth(c)
 	if err != nil {
 		response.GlobalResponse(c, err.Error(), http.StatusUnauthorized, nil)
 		return
@@ -50,17 +53,18 @@ func UpdateParticipant(c *gin.Context) {
 		return
 	}
 
-	message, err, status, participant := validateParticipantRequest(req, participant)
+	message, err, status, user := validateParticipantRequest(req, user)
 	if err != nil || status != 200 {
 		response.GlobalResponse(c, message, status, nil)
 		return
 	}
 
-	if err := initializers.DB.Session(&gorm.Session{FullSaveAssociations: true}).Updates(&participant).Error; err != nil {
-		response.GlobalResponse(c, "Failed to update participant data", http.StatusInternalServerError, nil)
+	if err := initializers.DB.Session(&gorm.Session{FullSaveAssociations: true}).Updates(&user).Error; err != nil {
+		response.GlobalResponse(c, "Failed to update user data", http.StatusInternalServerError, nil)
 		return
 	}
-	response.GlobalResponse(c, message, http.StatusOK, participant)
+	resp := response.BindUserToResponse(user)
+	response.GlobalResponse(c, message, http.StatusOK, resp)
 
 }
 
@@ -131,16 +135,22 @@ func validateParticipantRequest(req request.UmkmRequest, participant *model.Umkm
 			invalid = append(invalid, "Wrong date format!")
 			isSatisfied = false
 		} else {
-			if dob != participant.Dob {
+			dob = time.Date(dob.Year(), dob.Month(), dob.Day(), 0, 0, 0, 0, time.UTC)
+			participantDob := time.Date(participant.Dob.Year(), participant.Dob.Month(), participant.Dob.Day(), 0, 0, 0, 0, time.UTC)
+
+			if !dob.Equal(participantDob) {
 				if !utils.IsAdult(req.Dob) {
 					invalid = append(invalid, "User must be over 17!")
 					isSatisfied = false
 				}
+				log.Println(dob)
+				log.Println(participantDob)
 				valid = append(valid, "Date of Birth")
 				participant.Dob = dob
 			}
 		}
 	}
+
 	if len(req.BusinessName) != 0 && req.BusinessName != participant.BusinessName {
 		valid = append(valid, "Business Name")
 		participant.BusinessName = req.BusinessName
@@ -170,7 +180,19 @@ func GetAllUserDevices(c *gin.Context) {
 		return
 	}
 
-	response.GlobalResponse(c, "Successfully retrieved user devices", http.StatusOK, devices)
+	var responseData []response.DeviceResponse
+
+	for _, device := range devices {
+		respDevice := response.DeviceResponse{
+			ID:          device.ID,
+			Name:        device.Name,
+			IsActivated: device.IsActivated,
+			UmkmDataId:  device.UmkmDataId,
+		}
+		responseData = append(responseData, respDevice)
+	}
+
+	response.GlobalResponse(c, "Successfully retrieved user devices", http.StatusOK, responseData)
 }
 
 func GetDeviceById(c *gin.Context) {
@@ -196,8 +218,13 @@ func GetDeviceById(c *gin.Context) {
 		}
 		return
 	}
-
-	response.GlobalResponse(c, "Successfully retrieved device", http.StatusOK, device)
+	resp := request.DeviceRequest{
+		ID:          device.ID,
+		Name:        device.Name,
+		IsActivated: device.IsActivated,
+		UmkmDataId:  *device.UmkmDataId,
+	}
+	response.GlobalResponse(c, "Successfully retrieved device", http.StatusOK, resp)
 }
 
 func RegisterDeviceById(c *gin.Context) {
@@ -217,7 +244,7 @@ func RegisterDeviceById(c *gin.Context) {
 	err = model.RegisterDeviceById(initializers.DB, participant.ID, uuId)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			response.GlobalResponse(c, "Device not found", http.StatusNotFound, nil)
+			response.GlobalResponse(c, "Device not found or already registered", http.StatusNotFound, nil)
 		} else if errors.Is(err, utils.ErrDeviceAlreadyRegistered) {
 			response.GlobalResponse(c, "Device already registered", http.StatusNotFound, nil)
 		} else {
@@ -226,7 +253,38 @@ func RegisterDeviceById(c *gin.Context) {
 		return
 	}
 
-	response.GlobalResponse(c, "Successfully registered device", http.StatusOK, nil)
+	response.GlobalResponse(c, "Successfully registering device", http.StatusOK, nil)
+}
+
+func UpdateDeviceName(c *gin.Context) {
+	var req request.UmkmRequest
+	if err := c.Bind(&req); err != nil {
+		response.GlobalResponse(c, "Error binding the requested data", http.StatusBadRequest, err)
+		return
+	}
+
+	id := c.Param("id")
+
+	uuId, err := uuid.Parse(id)
+	if err != nil {
+		response.GlobalResponse(c, "Invalid device ID format", http.StatusBadRequest, nil)
+		return
+	}
+
+	participant, err := getUmkmByAuth(c)
+	if err != nil {
+		response.GlobalResponse(c, "", http.StatusUnauthorized, nil)
+		return
+	}
+
+	err = model.UpdateDeviceName(initializers.DB, participant.ID, uuId, req.Name)
+	if err != nil {
+		response.GlobalResponse(c, "Failed to update device name", http.StatusUnauthorized, nil)
+		log.Println(err.Error())
+		return
+	}
+
+	response.GlobalResponse(c, "successfully updating device name", http.StatusOK, nil)
 }
 
 func DeleteDeviceById(c *gin.Context) {

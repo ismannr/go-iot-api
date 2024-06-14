@@ -213,7 +213,7 @@ func RecoveryPassword(c *gin.Context) {
 	}
 
 	RandAccess := generateRandomString(64)
-	url := "http://localhost:3000/reset-password/change-password/" + RandAccess
+	url := "http://localhost:3000/reset-password/" + RandAccess
 
 	if SysData.RecoveryToken != nil {
 		SysData.RecoveryToken.RandTokenAccess = RandAccess

@@ -1,5 +1,3 @@
 web: gin-crud
-migrate: migrate/migrate.go
-addDevice: add-device/addDevice.go
-mig: gin-crud/migrate
-add: gin-crud/add-device
+migrate: go run migrate/migrate.go
+addDevice: go run add-device/addDevice.go

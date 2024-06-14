@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	initializers.LoadEnvVariables()
+	//initializers.LoadEnvVariables()
 	initializers.DatabaseInit()
 
 	models := []struct {

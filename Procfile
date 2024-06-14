@@ -1,1 +1,1 @@
-web: ./gin-crud
+web: gin-crud

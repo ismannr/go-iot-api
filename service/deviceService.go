@@ -112,7 +112,11 @@ func GetMonitoringData(c *gin.Context) {
 	}
 
 	if req.Date == "" || req.Interval == "" {
-		targetDate = time.Now()
+		now := time.Now().UTC().Format(time.RFC3339)
+		targetDate, err = time.Parse(time.RFC3339, now)
+		if err != nil {
+			log.Fatal(err)
+		}
 		interval = time.Minute * 5
 
 	} else {
@@ -137,7 +141,8 @@ func GetMonitoringData(c *gin.Context) {
 			return
 		}
 	}
-
+	log.Println(targetDate)
+	log.Println(interval)
 	csvData, err := GetDeviceCsvData(user.ID, deviceID, targetDate, interval)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

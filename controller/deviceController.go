@@ -6,5 +6,5 @@ import (
 )
 
 func DeviceController(r *gin.Engine) {
-	r.PUT("/device-gateway", service.ReceiveAndSaveData)
+	r.POST("/device-gateway", service.ReceiveAndSaveData)
 }

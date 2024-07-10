@@ -20,4 +20,12 @@ func UserController(r *gin.Engine) {
 
 	r.POST("/device/monitor-date-time", config.AuthFilter, service.GetMonitoringData)
 
+	r.POST("/group/create", config.AuthFilter, service.CreateDeviceGroup)
+	r.GET("/group", config.AuthFilter, service.GetAllGroup)
+	r.GET("/group/:id", config.AuthFilter, service.GetGroupById)
+	r.DELETE("/group/:id", config.AuthFilter, service.DeleteGroupById)
+
+	r.PUT("/device/to-group/:id", config.AuthFilter, service.AddDeviceToGroup)
+	r.DELETE("/device/to-group/:id", config.AuthFilter, service.RemoveDeviceFromGroup)
+
 }

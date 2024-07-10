@@ -20,6 +20,7 @@ func main() {
 		{&model.Token{}, "tokens"},
 		{&model.PasswordRecoveryToken{}, "password_recovery_tokens"},
 		{&model.Device{}, "devices"},
+		{&model.DeviceGrouping{}, "device_grouping"},
 	}
 
 	for _, m := range models {
@@ -30,7 +31,6 @@ func main() {
 		}
 	}
 
-	// Auto migrate tables
 	for _, m := range models {
 		if err := initializers.DB.AutoMigrate(m.model); err != nil {
 			log.Printf("Error migrating model %T: %v\n", m.model, err)

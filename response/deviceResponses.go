@@ -21,3 +21,9 @@ func BindDeviceToResponse(device *models.Device) DeviceResponse {
 	}
 	return resp
 }
+
+type DeviceGroupResponse struct {
+	ID         uuid.UUID `json:"id"`
+	UmkmDataId uuid.UUID `json:"umkm-data-id"`
+	GroupName  string    `json:"group-name"`
+}

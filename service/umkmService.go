@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"gin-crud/utils"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -279,12 +280,101 @@ func UpdateDeviceName(c *gin.Context) {
 
 	err = model.UpdateDeviceName(initializers.DB, participant.ID, uuId, req.Name)
 	if err != nil {
-		response.GlobalResponse(c, "Failed to update device name", http.StatusUnauthorized, nil)
+		response.GlobalResponse(c, "Device not found", http.StatusBadRequest, nil)
 		log.Println(err.Error())
 		return
 	}
 
 	response.GlobalResponse(c, "successfully updating device name", http.StatusOK, nil)
+}
+
+func CreateDeviceGroup(c *gin.Context) {
+	var req request.UmkmRequest
+	var message string
+	var status int
+	if err := c.Bind(&req); err != nil {
+		response.GlobalResponse(c, "Error binding the requested data", http.StatusBadRequest, err)
+		return
+	}
+
+	user, err := getUmkmByAuth(c)
+	if err != nil {
+		response.GlobalResponse(c, "", http.StatusUnauthorized, nil)
+		return
+	}
+
+	err, message, status = model.CreateGrouping(initializers.DB, user.ID, req.GroupName)
+	if err != nil {
+		response.GlobalResponse(c, message, status, nil)
+		log.Println(err.Error())
+		return
+	}
+
+	response.GlobalResponse(c, message, status, nil)
+}
+
+func AddDeviceToGroup(c *gin.Context) {
+	var req request.UmkmRequest
+	var message string
+	var status int
+	if err := c.Bind(&req); err != nil {
+		response.GlobalResponse(c, "Error binding the requested data", http.StatusBadRequest, err)
+		return
+	}
+
+	id := c.Param("id")
+
+	uuId, err := uuid.Parse(id)
+	if err != nil {
+		response.GlobalResponse(c, "Invalid device ID format", http.StatusBadRequest, nil)
+		return
+	}
+
+	user, err := getUmkmByAuth(c)
+	if err != nil {
+		response.GlobalResponse(c, "", http.StatusUnauthorized, nil)
+		return
+	}
+
+	err, message, status = model.AssignDeviceToGroup(initializers.DB, uuId, user.ID, req.GroupName)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		response.GlobalResponse(c, message, status, nil)
+		return
+	}
+	if err != nil {
+		response.GlobalResponse(c, message, status, nil)
+		log.Println(err.Error())
+		return
+	}
+
+	response.GlobalResponse(c, message, status, nil)
+}
+
+func RemoveDeviceFromGroup(c *gin.Context) {
+	var message string
+	var status int
+	id := c.Param("id")
+	uuId, err := uuid.Parse(id)
+	if err != nil {
+		response.GlobalResponse(c, "Invalid device ID format", http.StatusBadRequest, nil)
+		return
+	}
+	user, err := getUmkmByAuth(c)
+	if err != nil {
+		response.GlobalResponse(c, "", http.StatusUnauthorized, nil)
+		return
+	}
+	err, message, status = model.UnassignDeviceFromGroup(initializers.DB, uuId, user.ID)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		response.GlobalResponse(c, message, status, nil)
+		return
+	}
+	if err != nil {
+		response.GlobalResponse(c, message, status, nil)
+		log.Println(err.Error())
+		return
+	}
+	response.GlobalResponse(c, message, status, nil)
 }
 
 func DeleteDeviceById(c *gin.Context) {
@@ -313,4 +403,98 @@ func DeleteDeviceById(c *gin.Context) {
 	}
 
 	response.GlobalResponse(c, "Successfully deleted device relationship", http.StatusOK, nil)
+}
+
+func GetAllGroup(c *gin.Context) {
+	var groups []model.DeviceGrouping
+
+	participant, err := getUmkmByAuth(c)
+	if err != nil {
+		fmt.Println(1)
+		response.GlobalResponse(c, "Unauthorized", http.StatusUnauthorized, nil)
+		return
+	}
+
+	if err := initializers.DB.Where("umkm_data_id = ?", participant.ID).Find(&groups).Error; err != nil {
+		fmt.Println(2)
+		response.GlobalResponse(c, "Failed to retrieve groups", http.StatusInternalServerError, nil)
+		return
+	}
+	fmt.Println(3)
+	response.GlobalResponse(c, "Successfully retrieved all groups", http.StatusOK, groups)
+}
+
+func GetGroupById(c *gin.Context) {
+	var devices []model.Device
+
+	id := c.Param("id")
+
+	groupID, err := uuid.Parse(id)
+	if err != nil {
+		response.GlobalResponse(c, "Invalid device ID format", http.StatusBadRequest, nil)
+		return
+	}
+
+	user, err := getUmkmByAuth(c)
+	if err != nil {
+		response.GlobalResponse(c, "Unauthorized", http.StatusUnauthorized, nil)
+		return
+	}
+
+	if err := initializers.DB.Select("id, name, is_activated, group_name, group_id, umkm_data_id").Where("umkm_data_id = ? AND group_id = ?", user.ID, groupID).Find(&devices).Error; err != nil {
+		response.GlobalResponse(c, "Failed to retrieve devices", http.StatusInternalServerError, nil)
+		return
+	}
+
+	if len(devices) == 0 {
+		response.GlobalResponse(c, "No devices found", http.StatusNotFound, nil)
+		return
+	}
+
+	response.GlobalResponse(c, "Successfully retrieved all groups", http.StatusOK, devices)
+}
+
+func DeleteGroupById(c *gin.Context) {
+	var group model.DeviceGrouping
+	var message string
+	var status int
+
+	id := c.Param("id")
+
+	groupID, err := uuid.Parse(id)
+	if err != nil {
+		response.GlobalResponse(c, "Invalid device ID format", http.StatusBadRequest, nil)
+		return
+	}
+
+	user, err := getUmkmByAuth(c)
+	if err != nil {
+		fmt.Println(1)
+		response.GlobalResponse(c, "Unauthorized", http.StatusUnauthorized, nil)
+		return
+	}
+
+	err = initializers.DB.Where("id = ? AND umkm_data_id = ?", groupID, user.ID).
+		First(&group).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		response.GlobalResponse(c, "Group not found", http.StatusNotFound, nil)
+		return
+	} else if err != nil {
+		response.GlobalResponse(c, "Failed to retrieve group", http.StatusInternalServerError, nil)
+		log.Println(err.Error())
+		return
+	}
+
+	err, message, status = model.UnassignDevicesFromGroup(initializers.DB, groupID, user.ID)
+	if err != nil {
+		response.GlobalResponse(c, message, status, nil)
+		return
+	}
+
+	err = initializers.DB.Unscoped().Delete(&group).Error
+	if err != nil {
+		response.GlobalResponse(c, "Failed deleting group", http.StatusInternalServerError, nil)
+		log.Println(err.Error())
+	}
+	response.GlobalResponse(c, "Succesfully deleting group", 200, nil)
 }

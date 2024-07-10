@@ -12,19 +12,20 @@ import (
 type UmkmData struct {
 	ID uuid.UUID `gorm:"type:uuid;primary_key"`
 	gorm.Model
-	Name         string      `json:"name"`
-	Email        string      `json:"email" gorm:"uniqueIndex"`
-	Gender       string      `json:"gender"`
-	Phone        string      `json:"phone" gorm:"uniqueIndex"`
-	Dob          time.Time   `json:"birth_date"`
-	Address      string      `json:"address"`
-	City         string      `json:"city"`
-	Province     string      `json:"province"`
-	BusinessName string      `json:"business_name"`
-	BusinessDesc string      `json:"business_desc"`
-	SystemDataID *uuid.UUID  `gorm:"column:system_data_id;uniqueIndex"`
-	SystemData   *SystemData `gorm:"foreignKey:SystemDataID;constraint:OnDelete:CASCADE;"`
-	Devices      *[]Device
+	Name           string      `json:"name"`
+	Email          string      `json:"email" gorm:"uniqueIndex"`
+	Gender         string      `json:"gender"`
+	Phone          string      `json:"phone" gorm:"uniqueIndex"`
+	Dob            time.Time   `json:"birth_date"`
+	Address        string      `json:"address"`
+	City           string      `json:"city"`
+	Province       string      `json:"province"`
+	BusinessName   string      `json:"business_name"`
+	BusinessDesc   string      `json:"business_desc"`
+	SystemDataID   *uuid.UUID  `gorm:"column:system_data_id;uniqueIndex"`
+	SystemData     *SystemData `gorm:"foreignKey:SystemDataID;constraint:OnDelete:CASCADE;"`
+	Devices        *[]Device
+	DeviceGrouping *[]DeviceGrouping
 }
 
 func DeleteDeviceById(db *gorm.DB, userID uuid.UUID, deviceID uuid.UUID) error {
@@ -106,12 +107,8 @@ func RegisterDeviceById(db *gorm.DB, userID uuid.UUID, deviceID uuid.UUID) error
 
 func UpdateDeviceName(db *gorm.DB, userID uuid.UUID, deviceID uuid.UUID, newName string) error {
 	var device Device
-	var user *UmkmData
-	if err := db.Preload("Devices").First(&user, "id = ?", userID).Error; err != nil {
-		return err
-	}
-	if err := db.First(&device, "id = ?", deviceID).Error; err != nil {
-		return utils.ErrDeviceAlreadyDeleted
+	if err := db.Where("id = ? AND umkm_data_id = ?", deviceID, userID).First(&device).Error; err != nil {
+		return gorm.ErrRecordNotFound
 	}
 
 	device.Name = newName

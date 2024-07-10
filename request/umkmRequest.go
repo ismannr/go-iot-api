@@ -17,4 +17,5 @@ type UmkmRequest struct {
 	BusinessDesc string       `json:"business_desc"`
 	Role         models.Role  `json:"role"`
 	Level        models.Level `json:"level"`
+	GroupName    string       `json:"group_name" gorm:"unique;not null"`
 }

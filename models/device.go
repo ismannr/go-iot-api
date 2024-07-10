@@ -2,9 +2,11 @@ package models
 
 import (
 	"errors"
+	"fmt"
 	"gin-crud/initializers"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"net/http"
 )
 
 type Device struct {
@@ -13,7 +15,67 @@ type Device struct {
 	Name        string
 	Data        []byte
 	IsActivated bool
+	GroupName   *string    `json:"group_name"`
+	GroupID     *uuid.UUID `gorm:"column:group_id"`
 	UmkmDataId  *uuid.UUID `gorm:"column:umkm_data_id"`
+}
+
+func AssignDeviceToGroup(db *gorm.DB, deviceID uuid.UUID, userID uuid.UUID, groupName string) (error, string, int) {
+	var device Device
+	var deviceGrouping *DeviceGrouping
+	var message string
+
+	if err := db.Where("id = ? AND umkm_data_id = ?", deviceID, userID).First(&device).Error; err != nil {
+		message = fmt.Sprintf("Device with id %s not found", deviceID)
+		return err, message, http.StatusBadRequest
+	}
+
+	if device.GroupName != nil {
+		message = fmt.Sprintf("Device already assigned to %s", *device.GroupName)
+		return nil, message, http.StatusBadRequest
+	}
+
+	if err := db.Where("group_name = ?", groupName).First(&deviceGrouping).Error; err != nil {
+		message = fmt.Sprintf("Group with name %s not found", groupName)
+		return err, message, http.StatusBadRequest
+	}
+
+	device.GroupName = &deviceGrouping.GroupName
+	device.GroupID = &deviceGrouping.ID
+
+	if err := db.Save(&device).Error; err != nil {
+		message = fmt.Sprintf("Failed to group the device to %s", groupName)
+		return err, message, http.StatusInternalServerError
+	}
+
+	message = fmt.Sprintf("Succesfully adding device to %s", groupName)
+	return nil, message, 200
+}
+
+func UnassignDeviceFromGroup(db *gorm.DB, deviceID uuid.UUID, userID uuid.UUID) (error, string, int) {
+	var device Device
+	var message string
+
+	if err := db.Where("id = ? AND umkm_data_id = ?", deviceID, userID).First(&device).Error; err != nil {
+		message = fmt.Sprintf("Device with id %s not found", deviceID)
+		return err, message, http.StatusBadRequest
+	}
+
+	if device.GroupName == nil && device.GroupID == nil {
+		message = "Device is not assigned to any group"
+		return nil, message, http.StatusBadRequest
+	}
+
+	device.GroupName = nil
+	device.GroupID = nil
+
+	if err := db.Save(&device).Error; err != nil {
+		message = "Failed to unassign the device from the group"
+		return err, message, http.StatusInternalServerError
+	}
+
+	message = "Successfully unassigned the device from the group"
+	return nil, message, http.StatusOK
 }
 
 func SaveCSVToDevice(db *gorm.DB, csvData []byte, deviceID uuid.UUID) error {

@@ -17,7 +17,7 @@ func main() {
 	r := gin.Default()
 
 	r.Use(cors.New(cors.Config{
-		//AllowOrigins:     []string{"http://localhost:3005"}, // pake url frontend
+		//AllowOrigins: []string{"http://localhost:3000"}, // pake url frontend
 		AllowAllOrigins:  true, //jangan lupa diganti
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Authorization", "Content-Type"},

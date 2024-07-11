@@ -19,7 +19,7 @@ type DeviceGrouping struct {
 func CreateGrouping(db *gorm.DB, umkmDataId uuid.UUID, groupName string) (error, string, int) {
 	var dg DeviceGrouping
 
-	if err := db.Where("group_name = ? AND umkm_data_id = ?", groupName, umkmDataId).First(&DeviceGrouping{}).Error; err == nil {
+	if err := db.Where("LOWER(group_name) = LOWER(?) AND umkm_data_id = ?", groupName, umkmDataId).First(&DeviceGrouping{}).Error; err == nil {
 		return nil, "Group already exist", http.StatusBadRequest
 	} else {
 		dg.ID = uuid.New()

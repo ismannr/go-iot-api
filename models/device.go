@@ -35,7 +35,7 @@ func AssignDeviceToGroup(db *gorm.DB, deviceID uuid.UUID, userID uuid.UUID, grou
 		return nil, message, http.StatusBadRequest
 	}
 
-	if err := db.Where("group_name = ?", groupName).First(&deviceGrouping).Error; err != nil {
+	if err := db.Where("LOWER(group_name) = LOWER(?)", groupName).First(&deviceGrouping).Error; err != nil {
 		message = fmt.Sprintf("Group with name %s not found", groupName)
 		return err, message, http.StatusBadRequest
 	}
@@ -48,7 +48,7 @@ func AssignDeviceToGroup(db *gorm.DB, deviceID uuid.UUID, userID uuid.UUID, grou
 		return err, message, http.StatusInternalServerError
 	}
 
-	message = fmt.Sprintf("Succesfully adding device to %s", groupName)
+	message = fmt.Sprintf("Succesfully adding device to %s", deviceGrouping.GroupName)
 	return nil, message, 200
 }
 

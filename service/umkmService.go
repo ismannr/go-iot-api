@@ -378,6 +378,9 @@ func RemoveDeviceFromGroup(c *gin.Context) {
 }
 
 func DeleteDeviceById(c *gin.Context) {
+	var message string
+	var status int
+
 	id := c.Param("id")
 	uuId, err := uuid.Parse(id)
 	if err != nil {
@@ -385,12 +388,24 @@ func DeleteDeviceById(c *gin.Context) {
 		return
 	}
 
-	participant, err := getUmkmByAuth(c)
+	user, err := getUmkmByAuth(c)
 	if err != nil {
 		response.GlobalResponse(c, err.Error(), http.StatusUnauthorized, nil)
 		return
 	}
-	err = model.DeleteDeviceById(initializers.DB, participant.ID, uuId)
+
+	err, message, status = model.UnassignDeviceFromGroup(initializers.DB, uuId, user.ID)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		response.GlobalResponse(c, message, status, nil)
+		return
+	}
+	if err != nil {
+		response.GlobalResponse(c, message, status, nil)
+		log.Println(err.Error())
+		return
+	}
+
+	err = model.DeleteDeviceById(initializers.DB, user.ID, uuId)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.GlobalResponse(c, "Device not found", http.StatusNotFound, nil)

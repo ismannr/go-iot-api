@@ -6,6 +6,7 @@ import (
 	"gin-crud/initializers"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"log"
 	"net/http"
 )
 
@@ -42,9 +43,14 @@ func AssignDeviceToGroup(db *gorm.DB, deviceID uuid.UUID, userID uuid.UUID, grou
 
 	device.GroupName = &deviceGrouping.GroupName
 	device.GroupID = &deviceGrouping.ID
-
+	deviceGrouping.NumberOfDevice += 1
 	if err := db.Save(&device).Error; err != nil {
 		message = fmt.Sprintf("Failed to group the device to %s", groupName)
+		return err, message, http.StatusInternalServerError
+	}
+
+	if err := db.Save(&deviceGrouping).Error; err != nil {
+		message = fmt.Sprintf("Failed to add device count to %s", groupName)
 		return err, message, http.StatusInternalServerError
 	}
 
@@ -55,6 +61,7 @@ func AssignDeviceToGroup(db *gorm.DB, deviceID uuid.UUID, userID uuid.UUID, grou
 func UnassignDeviceFromGroup(db *gorm.DB, deviceID uuid.UUID, userID uuid.UUID) (error, string, int) {
 	var device Device
 	var message string
+	var deviceGrouping DeviceGrouping
 
 	if err := db.Where("id = ? AND umkm_data_id = ?", deviceID, userID).First(&device).Error; err != nil {
 		message = fmt.Sprintf("Device with id %s not found", deviceID)
@@ -66,8 +73,19 @@ func UnassignDeviceFromGroup(db *gorm.DB, deviceID uuid.UUID, userID uuid.UUID) 
 		return nil, message, http.StatusBadRequest
 	}
 
+	if err := db.Where("id = ?", device.GroupID).First(&deviceGrouping).Error; err != nil {
+		log.Println(err.Error())
+		return err, "Failed to get device group", http.StatusInternalServerError
+	}
+
+	deviceGrouping.NumberOfDevice -= 1
+
 	device.GroupName = nil
 	device.GroupID = nil
+
+	if err := db.Save(&deviceGrouping).Error; err != nil {
+		return err, "Failed to update device count", http.StatusInternalServerError
+	}
 
 	if err := db.Save(&device).Error; err != nil {
 		message = "Failed to unassign the device from the group"

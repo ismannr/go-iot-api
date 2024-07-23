@@ -11,9 +11,10 @@ import (
 
 type DeviceGrouping struct {
 	gorm.Model
-	ID         uuid.UUID `gorm:"type:uuid;primary_key"`
-	UmkmDataId uuid.UUID `gorm:"column:umkm_data_id"`
-	GroupName  string    `json:"group_name"`
+	ID             uuid.UUID `gorm:"type:uuid;primary_key"`
+	UmkmDataId     uuid.UUID `gorm:"column:umkm_data_id"`
+	GroupName      string    `json:"group_name"`
+	NumberOfDevice int       `json:"number_of_device"`
 }
 
 func CreateGrouping(db *gorm.DB, umkmDataId uuid.UUID, groupName string) (error, string, int) {
@@ -25,7 +26,7 @@ func CreateGrouping(db *gorm.DB, umkmDataId uuid.UUID, groupName string) (error,
 		dg.ID = uuid.New()
 		dg.UmkmDataId = umkmDataId
 		dg.GroupName = groupName
-
+		dg.NumberOfDevice = 0
 		if err := db.Create(&dg).Error; err != nil {
 			return err, err.Error(), http.StatusInternalServerError
 		}
@@ -53,5 +54,5 @@ func UnassignDevicesFromGroup(db *gorm.DB, groupID uuid.UUID, userID uuid.UUID) 
 		return err, "Failed unassign device from group", http.StatusBadRequest
 	}
 
-	return nil, "Successfully unassigned devices from group", http.StatusOK
+	return nil, "Successfully unassigned all device from group", http.StatusOK
 }

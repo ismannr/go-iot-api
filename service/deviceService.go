@@ -29,7 +29,7 @@ func toCSV(data request.CSVData) ([]byte, error) {
 		strconv.FormatFloat(float64(data.EcLevel), 'f', -1, 32),
 		strconv.FormatFloat(float64(data.PhLevel), 'f', -1, 32),
 		data.TimeStamp.Format(time.RFC3339),
-		data.ID.String(),
+		data.ID,
 	}
 
 	if err := writer.Write(record); err != nil {
@@ -43,21 +43,29 @@ func toCSV(data request.CSVData) ([]byte, error) {
 func ReceiveAndSaveData(c *gin.Context) { // saving data from arduino to server
 	var csvData request.CSVData
 
-	if err := c.Bind(&csvData); err != nil {
-		message := fmt.Sprintf("Invalid JSON data. Error: %s", http.StatusText(http.StatusBadRequest))
-		log.Println(message)
+	if err := c.ShouldBindUri(&csvData); err != nil {
+		//message := fmt.Sprintf("Invalid JSON data. Error: %s", http.StatusText(http.StatusBadRequest))
+		log.Println(err)
+		fmt.Println("test")
 		response.GlobalResponse(c, "Invalid JSON data", http.StatusBadRequest, nil)
 		return
 	}
+	parsedUUID, err := uuid.Parse(csvData.ID)
 
-	device, err := models.GetDeviceById(initializers.DB, csvData.ID)
+	if err != nil {
+		log.Println(err)
+		response.GlobalResponse(c, "Unexpected Error", http.StatusInternalServerError, nil)
+		return
+	}
+
+	device, err := models.GetDeviceById(initializers.DB, parsedUUID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			message := fmt.Sprintf("Device not found ID:%s", csvData.ID.String())
+			message := fmt.Sprintf("Device not found ID:%s", csvData.ID)
 			log.Println(message)
 			response.GlobalResponse(c, message, http.StatusNotFound, nil)
 		} else {
-			message := fmt.Sprintf("Failed to retrieve device ID:%s", csvData.ID.String())
+			message := fmt.Sprintf("Failed to retrieve device ID:%s", csvData.ID)
 			log.Println(message)
 			response.GlobalResponse(c, message, http.StatusInternalServerError, nil)
 		}
@@ -65,7 +73,7 @@ func ReceiveAndSaveData(c *gin.Context) { // saving data from arduino to server
 	}
 
 	if device.UmkmDataId == nil {
-		message := fmt.Sprintf("Device not associated with any user ID:%s", csvData.ID.String())
+		message := fmt.Sprintf("Device not associated with any user ID:%s", csvData.ID)
 		log.Println(message)
 		response.GlobalResponse(c, message, http.StatusBadRequest, nil)
 		return
@@ -73,15 +81,15 @@ func ReceiveAndSaveData(c *gin.Context) { // saving data from arduino to server
 
 	csvBytes, err := toCSV(csvData)
 	if err != nil {
-		message := fmt.Sprintf("Failed to convert data to CSV ID:%s", csvData.ID.String())
+		message := fmt.Sprintf("Failed to convert data to CSV ID:%s", csvData.ID)
 		log.Println(message)
 		response.GlobalResponse(c, message, http.StatusInternalServerError, nil)
 		return
 	}
 
-	err = models.SaveCSVToDevice(initializers.DB, csvBytes, csvData.ID)
+	err = models.SaveCSVToDevice(initializers.DB, csvBytes, parsedUUID)
 	if err != nil {
-		message := fmt.Sprintf("Failed to save data to database ID:%s", csvData.ID.String())
+		message := fmt.Sprintf("Failed to save data to database ID:%s", csvData.ID)
 		log.Println(message)
 		response.GlobalResponse(c, message, http.StatusInternalServerError, nil)
 		return
@@ -201,10 +209,7 @@ func parseCSVData(data []byte) ([]request.CSVData, error) {
 			return nil, err
 		}
 
-		id, err := uuid.Parse(record[5])
-		if err != nil {
-			return nil, err
-		}
+		id := record[5]
 
 		records = append(records, request.CSVData{
 			OxygenLevel: float32(oxygenLevel),
@@ -247,7 +252,7 @@ func writeFilteredCSVData(records []request.CSVData) (string, error) {
 			strconv.FormatFloat(float64(record.EcLevel), 'f', -1, 32),
 			strconv.FormatFloat(float64(record.PhLevel), 'f', -1, 32),
 			record.TimeStamp.Format(time.RFC3339),
-			record.ID.String(),
+			record.ID,
 		}
 		if err := w.Write(row); err != nil {
 			return "", err

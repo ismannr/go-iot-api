@@ -1,16 +1,15 @@
 package request
 
 import (
-	"github.com/google/uuid"
 	"time"
 )
 
 type CSVData struct {
-	OxygenLevel float32       `json:"oxygen_level,omitempty"`
-	WaterTemp   float32       `json:"water_temp,omitempty"`
-	EcLevel     float32       `json:"ec_level,omitempty"`
-	PhLevel     float32       `json:"ph_level,omitempty"`
-	TimeStamp   time.Time     `json:"time_stamp"`
-	ID          uuid.UUID     `json:"id,omitempty"`
+	OxygenLevel float32       `uri:"oxygen_level" binding:"required"`
+	WaterTemp   float32       `uri:"water_temp" binding:"required"`
+	EcLevel     float32       `uri:"ec_level" binding:"required"`
+	PhLevel     float32       `uri:"ph_level" binding:"required"`
+	TimeStamp   time.Time     `uri:"time_stamp" binding:"required"`
+	ID          string        `uri:"id" binding:"required,uuid"`
 	Interval    time.Duration `json:"interval"`
 }

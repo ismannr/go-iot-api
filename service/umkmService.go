@@ -232,6 +232,11 @@ func RegisterDeviceById(c *gin.Context) {
 	id := c.Param("id")
 	var req request.DeviceRequest
 
+	if err := c.Bind(&req); err != nil {
+		response.GlobalResponse(c, "Error binding body", http.StatusBadRequest, nil)
+		return
+	}
+
 	if req.Name == "" {
 		response.GlobalResponse(c, "Device name cannot be empty", http.StatusBadRequest, nil)
 		return

@@ -44,9 +44,7 @@ func ReceiveAndSaveData(c *gin.Context) { // saving data from arduino to server
 	var csvData request.CSVData
 
 	if err := c.ShouldBindUri(&csvData); err != nil {
-		//message := fmt.Sprintf("Invalid JSON data. Error: %s", http.StatusText(http.StatusBadRequest))
 		log.Println(err)
-		fmt.Println("test")
 		response.GlobalResponse(c, "Invalid JSON data", http.StatusBadRequest, nil)
 		return
 	}

@@ -24,6 +24,7 @@ func UserController(r *gin.Engine) {
 	r.GET("/group", config.AuthFilter, service.GetAllGroup)
 	r.GET("/group/:id", config.AuthFilter, service.GetGroupById)
 	r.DELETE("/group/:id", config.AuthFilter, service.DeleteGroupById)
+	r.PUT("/group/:id", config.AuthFilter, service.RenameGroup)
 
 	r.PUT("/device/to-group/:id", config.AuthFilter, service.AddDeviceToGroup)
 	r.DELETE("/device/to-group/:id", config.AuthFilter, service.RemoveDeviceFromGroup)

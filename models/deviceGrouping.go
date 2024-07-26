@@ -34,6 +34,27 @@ func CreateGrouping(db *gorm.DB, umkmDataId uuid.UUID, groupName string) (error,
 	}
 }
 
+func RenameGrouping(db *gorm.DB, umkmDataId uuid.UUID, groupId uuid.UUID, newGroupName string) (error, string, int) {
+	var dg DeviceGrouping
+
+	if err := db.Where("id = ? AND umkm_data_id = ?", groupId, umkmDataId).First(&dg).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, "Group not found", http.StatusNotFound
+		}
+		return err, "Failed to retrieve group", http.StatusInternalServerError
+	}
+
+	if err := db.Model(&dg).Update("GroupName", newGroupName).Error; err != nil {
+		return err, "Failed to update group", http.StatusInternalServerError
+	}
+
+	if err := db.Model(&Device{}).Where("group_id = ? AND umkm_data_id = ?", groupId, umkmDataId).Update("GroupName", newGroupName).Error; err != nil {
+		return err, "Failed to update device group names", http.StatusInternalServerError
+	}
+
+	return nil, "Successfully renamed group", http.StatusOK
+}
+
 func UnassignDevicesFromGroup(db *gorm.DB, groupID uuid.UUID, userID uuid.UUID) (error, string, int) {
 	var message string
 	updateFields := map[string]interface{}{

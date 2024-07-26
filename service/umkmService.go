@@ -313,6 +313,40 @@ func CreateDeviceGroup(c *gin.Context) {
 	response.GlobalResponse(c, message, status, nil)
 }
 
+func RenameGroup(c *gin.Context) {
+	var req request.GroupRequest
+	var message string
+	var status int
+
+	id := c.Param("id")
+
+	uuId, err := uuid.Parse(id)
+	if err != nil {
+		response.GlobalResponse(c, "Invalid device ID format", http.StatusBadRequest, nil)
+		return
+	}
+
+	if err := c.Bind(&req); err != nil {
+		response.GlobalResponse(c, "Error binding the requested data", http.StatusBadRequest, err)
+		return
+	}
+
+	user, err := getUmkmByAuth(c)
+	if err != nil {
+		response.GlobalResponse(c, "", http.StatusUnauthorized, nil)
+		return
+	}
+
+	err, message, status = model.RenameGrouping(initializers.DB, user.ID, uuId, req.NewGroupName)
+	if err != nil {
+		response.GlobalResponse(c, message, status, nil)
+		log.Println(err.Error())
+		return
+	}
+
+	response.GlobalResponse(c, message, status, nil)
+}
+
 func AddDeviceToGroup(c *gin.Context) {
 	var req request.UmkmRequest
 	var message string

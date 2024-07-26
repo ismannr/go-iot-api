@@ -230,6 +230,13 @@ func GetDeviceById(c *gin.Context) {
 
 func RegisterDeviceById(c *gin.Context) {
 	id := c.Param("id")
+	var req request.DeviceRequest
+
+	if req.Name == "" {
+		response.GlobalResponse(c, "Device name cannot be empty", http.StatusBadRequest, nil)
+		return
+	}
+
 	uuId, err := uuid.Parse(id)
 	if err != nil {
 		response.GlobalResponse(c, "Invalid device ID format", http.StatusBadRequest, nil)
@@ -242,7 +249,7 @@ func RegisterDeviceById(c *gin.Context) {
 		return
 	}
 
-	err = model.RegisterDeviceById(initializers.DB, participant.ID, uuId)
+	err = model.RegisterDeviceById(initializers.DB, participant.ID, uuId, req.Name)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.GlobalResponse(c, "Device not found or already registered", http.StatusNotFound, nil)

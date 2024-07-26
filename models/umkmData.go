@@ -75,7 +75,7 @@ func DeleteDeviceById(db *gorm.DB, userID uuid.UUID, deviceID uuid.UUID) error {
 	return db.Save(&user).Error
 }
 
-func RegisterDeviceById(db *gorm.DB, userID uuid.UUID, deviceID uuid.UUID) error {
+func RegisterDeviceById(db *gorm.DB, userID uuid.UUID, deviceID uuid.UUID, deviceName string) error {
 	var device Device
 	if err := db.First(&device, "id = ? AND umkm_data_id IS NULL", deviceID).Error; err != nil {
 		return err
@@ -91,9 +91,9 @@ func RegisterDeviceById(db *gorm.DB, userID uuid.UUID, deviceID uuid.UUID) error
 			return utils.ErrDeviceAlreadyRegistered
 		}
 	}
+	device.Name = deviceName
 	device.IsActivated = true
 	device.UmkmDataId = &user.ID
-	device.Name = "New Device"
 	if err := db.Save(&device).Error; err != nil {
 		return err
 	}

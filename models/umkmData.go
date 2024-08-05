@@ -5,6 +5,7 @@ import (
 	"gin-crud/utils"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"net/http"
 	"strings"
 	"time"
 )
@@ -75,34 +76,39 @@ func DeleteDeviceById(db *gorm.DB, userID uuid.UUID, deviceID uuid.UUID) error {
 	return db.Save(&user).Error
 }
 
-func RegisterDeviceById(db *gorm.DB, userID uuid.UUID, deviceID uuid.UUID, deviceName string) error {
+func RegisterDeviceById(db *gorm.DB, userID uuid.UUID, deviceID uuid.UUID, deviceName string, groupId uuid.UUID) (error, string, int) {
 	var device Device
 	if err := db.First(&device, "id = ? AND umkm_data_id IS NULL", deviceID).Error; err != nil {
-		return err
+		return err, "Cannot find device", http.StatusBadRequest
 	}
 
 	var user *UmkmData
 	if err := db.Preload("Devices").First(&user, "id = ?", userID).Error; err != nil {
-		return err
+		return err, "Cannot find user", http.StatusInternalServerError
 	}
 
 	for _, dev := range *user.Devices {
 		if dev.ID == deviceID {
-			return utils.ErrDeviceAlreadyRegistered
+			return utils.ErrDeviceAlreadyRegistered, "Device already registered", http.StatusBadRequest
 		}
 	}
 	device.Name = deviceName
 	device.IsActivated = true
 	device.UmkmDataId = &user.ID
 	if err := db.Save(&device).Error; err != nil {
-		return err
+		return err, "Failed to save device", http.StatusInternalServerError
 	}
 
 	if user.Devices == nil {
 		user.Devices = &[]Device{}
 	}
 	*user.Devices = append(*user.Devices, device)
-	return db.Save(&user).Error
+
+	err, message, status := AssignDeviceToGroup(db, deviceID, userID, groupId)
+	if err != nil {
+		return err, message, status
+	}
+	return db.Save(&user).Error, "Successfully adding device", http.StatusOK
 }
 
 func UpdateDeviceName(db *gorm.DB, userID uuid.UUID, deviceID uuid.UUID, newName string) error {

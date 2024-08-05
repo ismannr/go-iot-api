@@ -8,7 +8,9 @@ import (
 type DeviceResponse struct {
 	ID          uuid.UUID  `json:"id,omitempty"`
 	Name        string     `json:"name,omitempty"`
-	IsActivated bool       `json:"is_activated,omitempty"`
+	IsActivated bool       `json:"is_activated"`
+	GroupName   *string    `json:"group_name"`
+	GroupID     *uuid.UUID `json:"group_id"`
 	UmkmDataId  *uuid.UUID `json:"umkm_data_id,omitempty"`
 }
 

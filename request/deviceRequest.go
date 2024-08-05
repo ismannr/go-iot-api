@@ -7,6 +7,7 @@ import (
 type DeviceRequest struct {
 	ID          uuid.UUID
 	Name        string
+	GroupID     uuid.UUID `json:"group_id"`
 	IsActivated bool
 	UmkmDataId  uuid.UUID
 }

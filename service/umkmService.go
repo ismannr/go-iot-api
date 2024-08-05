@@ -187,6 +187,8 @@ func GetAllUserDevices(c *gin.Context) {
 		respDevice := response.DeviceResponse{
 			ID:          device.ID,
 			Name:        device.Name,
+			GroupName:   device.GroupName,
+			GroupID:     device.GroupID,
 			IsActivated: device.IsActivated,
 			UmkmDataId:  device.UmkmDataId,
 		}
@@ -242,6 +244,11 @@ func RegisterDeviceById(c *gin.Context) {
 		return
 	}
 
+	if req.GroupID == uuid.Nil {
+		response.GlobalResponse(c, "Group ID cannot be empty", http.StatusBadRequest, nil)
+		return
+	}
+
 	uuId, err := uuid.Parse(id)
 	if err != nil {
 		response.GlobalResponse(c, "Invalid device ID format", http.StatusBadRequest, nil)
@@ -254,14 +261,14 @@ func RegisterDeviceById(c *gin.Context) {
 		return
 	}
 
-	err = model.RegisterDeviceById(initializers.DB, participant.ID, uuId, req.Name)
+	err, message, status := model.RegisterDeviceById(initializers.DB, participant.ID, uuId, req.Name, req.GroupID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.GlobalResponse(c, "Device not found or already registered", http.StatusNotFound, nil)
 		} else if errors.Is(err, utils.ErrDeviceAlreadyRegistered) {
 			response.GlobalResponse(c, "Device already registered", http.StatusNotFound, nil)
 		} else {
-			response.GlobalResponse(c, "Failed to register device", http.StatusInternalServerError, nil)
+			response.GlobalResponse(c, message, http.StatusInternalServerError, status)
 		}
 		return
 	}
@@ -359,42 +366,42 @@ func RenameGroup(c *gin.Context) {
 	response.GlobalResponse(c, message, status, nil)
 }
 
-func AddDeviceToGroup(c *gin.Context) {
-	var req request.UmkmRequest
-	var message string
-	var status int
-	if err := c.Bind(&req); err != nil {
-		response.GlobalResponse(c, "Error binding the requested data", http.StatusBadRequest, err)
-		return
-	}
-
-	id := c.Param("id")
-
-	uuId, err := uuid.Parse(id)
-	if err != nil {
-		response.GlobalResponse(c, "Invalid device ID format", http.StatusBadRequest, nil)
-		return
-	}
-
-	user, err := getUmkmByAuth(c)
-	if err != nil {
-		response.GlobalResponse(c, "", http.StatusUnauthorized, nil)
-		return
-	}
-
-	err, message, status = model.AssignDeviceToGroup(initializers.DB, uuId, user.ID, req.GroupName)
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		response.GlobalResponse(c, message, status, nil)
-		return
-	}
-	if err != nil {
-		response.GlobalResponse(c, message, status, nil)
-		log.Println(err.Error())
-		return
-	}
-
-	response.GlobalResponse(c, message, status, nil)
-}
+//func AddDeviceToGroup(c *gin.Context) {
+//	var req request.UmkmRequest
+//	var message string
+//	var status int
+//	if err := c.Bind(&req); err != nil {
+//		response.GlobalResponse(c, "Error binding the requested data", http.StatusBadRequest, err)
+//		return
+//	}
+//
+//	id := c.Param("id")
+//
+//	uuId, err := uuid.Parse(id)
+//	if err != nil {
+//		response.GlobalResponse(c, "Invalid device ID format", http.StatusBadRequest, nil)
+//		return
+//	}
+//
+//	user, err := getUmkmByAuth(c)
+//	if err != nil {
+//		response.GlobalResponse(c, "", http.StatusUnauthorized, nil)
+//		return
+//	}
+//
+//	err, message, status = model.AssignDeviceToGroup(initializers.DB, uuId, user.ID, req.GroupName)
+//	if errors.Is(err, gorm.ErrRecordNotFound) {
+//		response.GlobalResponse(c, message, status, nil)
+//		return
+//	}
+//	if err != nil {
+//		response.GlobalResponse(c, message, status, nil)
+//		log.Println(err.Error())
+//		return
+//	}
+//
+//	response.GlobalResponse(c, message, status, nil)
+//}
 
 func RemoveDeviceFromGroup(c *gin.Context) {
 	var message string

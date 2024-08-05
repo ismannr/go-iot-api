@@ -21,7 +21,7 @@ type Device struct {
 	UmkmDataId  *uuid.UUID `gorm:"column:umkm_data_id"`
 }
 
-func AssignDeviceToGroup(db *gorm.DB, deviceID uuid.UUID, userID uuid.UUID, groupName string) (error, string, int) {
+func AssignDeviceToGroup(db *gorm.DB, deviceID uuid.UUID, userID uuid.UUID, groupId uuid.UUID) (error, string, int) {
 	var device Device
 	var deviceGrouping *DeviceGrouping
 	var message string
@@ -36,8 +36,8 @@ func AssignDeviceToGroup(db *gorm.DB, deviceID uuid.UUID, userID uuid.UUID, grou
 		return nil, message, http.StatusBadRequest
 	}
 
-	if err := db.Where("LOWER(group_name) = LOWER(?)", groupName).First(&deviceGrouping).Error; err != nil {
-		message = fmt.Sprintf("Group with name %s not found", groupName)
+	if err := db.Where("id = ?", groupId).First(&deviceGrouping).Error; err != nil {
+		message = fmt.Sprintf("Group with name %s not found", groupId)
 		return err, message, http.StatusBadRequest
 	}
 
@@ -45,12 +45,12 @@ func AssignDeviceToGroup(db *gorm.DB, deviceID uuid.UUID, userID uuid.UUID, grou
 	device.GroupID = &deviceGrouping.ID
 	deviceGrouping.NumberOfDevice += 1
 	if err := db.Save(&device).Error; err != nil {
-		message = fmt.Sprintf("Failed to group the device to %s", groupName)
+		message = fmt.Sprintf("Failed to group the device to %s", groupId)
 		return err, message, http.StatusInternalServerError
 	}
 
 	if err := db.Save(&deviceGrouping).Error; err != nil {
-		message = fmt.Sprintf("Failed to add device count to %s", groupName)
+		message = fmt.Sprintf("Failed to add device count to %s", groupId)
 		return err, message, http.StatusInternalServerError
 	}
 
